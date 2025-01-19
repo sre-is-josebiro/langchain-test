@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommender</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8 text-indigo-600">Movie Recommender</h1>
+        
+        <div class="max-w-2xl mx-auto">
+            <form id="recommendForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="preferences">
+                        What kind of movie are you looking for?
+                    </label>
+                    <textarea
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="preferences"
+                        placeholder="E.g., 'I'd like a live action disney movie from the 1960s'"
+                        rows="3"
+                    ></textarea>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+                        type="submit"
+                    >
+                        Get Recommendations
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="recommendations" class="hidden max-w-4xl mx-auto mt-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Your Recommendations</h2>
+            <div id="explanation" class="mb-6 text-gray-600 italic"></div>
+            <div class="overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <tbody id="movieList" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('recommendForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const preferences = document.getElementById('preferences').value;
+            if (!preferences) return;
+
+            const submitButton = e.target.querySelector('button');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Getting Recommendations...';
+
+            try {
+                const response = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ preferences }),
+                });
+
+                const data = await response.json();
+                
+                // Show recommendations section
+                const recommendationsDiv = document.getElementById('recommendations');
+                const explanationDiv = document.getElementById('explanation');
+                const movieListDiv = document.getElementById('movieList');
+                
+                recommendationsDiv.classList.remove('hidden');
+                explanationDiv.textContent = data.explanation;
+                movieListDiv.innerHTML = '';
+
+                data.recommendations.forEach(movie => {
+                    const posterUrl = movie.poster_path 
+                        ? `${data.image_base_url}${movie.poster_path}`
+                        : 'https://via.placeholder.com/500x750?text=No+Image+Available';
+                    
+                    const tmdbUrl = `${data.tmdb_base_url}${movie.id}`;
+                    
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50 transition-colors duration-200';
+                    
+                    row.innerHTML = `
+                        <td class="w-48 p-4">
+                            <div class="aspect-[2/3] overflow-hidden rounded-lg shadow-sm">
+                                <img src="${posterUrl}" alt="${movie.title}" 
+                                    class="w-full h-full object-cover"
+                                    onerror="this.onerror=null; this.src='https://via.placeholder.com/500x750?text=Image+Not+Found';">
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex flex-col h-full justify-between">
+                                <div>
+                                    <a href="${tmdbUrl}" target="_blank" rel="noopener noreferrer" 
+                                       class="text-xl font-semibold text-indigo-600 hover:text-indigo-800 transition-colors duration-200 mb-2 block">
+                                        ${movie.title}
+                                    </a>
+                                    <p class="text-gray-600 mb-4 line-clamp-3">${movie.description}</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                                        Rating: ${movie.rating}/10
+                                    </span>
+                                    <a href="${tmdbUrl}" target="_blank" rel="noopener noreferrer" 
+                                       class="text-sm text-indigo-600 hover:text-indigo-800 transition-colors duration-200">
+                                        View on TMDB →
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                    
+                    movieListDiv.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to get recommendations. Please try again.');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Get Recommendations';
+            }
+        });
+    </script>
+</body>
+</html>
